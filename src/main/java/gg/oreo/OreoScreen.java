@@ -23,6 +23,10 @@ public final class OreoScreen extends Screen {
     );
 
     private static final Map<String, Boolean> states = new HashMap<>();
+
+    public static boolean isModuleEnabled(String name) {
+        return states.getOrDefault(name, false);
+    }
     private int selected = 0;
     private EditBox search;
 
