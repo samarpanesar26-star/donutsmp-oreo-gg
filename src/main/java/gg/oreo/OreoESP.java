@@ -8,7 +8,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.BlockPos;
-import net.minecraft.inventory.Inventory;
+import net.minecraft.world.Container;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -68,7 +68,7 @@ public final class OreoESP {
 
                     if (spawnerOn && (block == Blocks.SPAWNER || block == Blocks.TRIAL_SPAWNER)) {
                         SPAWNERS.add(pos.immutable());
-                    } else if (storageOn && entity instanceof Inventory) {
+                    } else if (storageOn && entity instanceof Container) {
                         STORAGE.add(pos.immutable());
                     }
                 }
