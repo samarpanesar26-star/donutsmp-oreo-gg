@@ -28,6 +28,8 @@ public final class Freecam {
         camera.setYRot(returnYaw);
         camera.setXRot(returnPitch);
         camera.setYHeadRot(returnYaw);
+        camera.setNoGravity(true);
+        camera.setInvisible(true);
 
         client.level.addEntity(camera);
         client.setCameraEntity(camera);
@@ -37,14 +39,18 @@ public final class Freecam {
         if (camera == null) return;
 
         if (client.level != null) {
-            client.level.removeEntity(camera.getId(), net.minecraft.world.entity.Entity.RemovalReason.DISCARDED);
+            client.level.removeEntity(
+                    camera.getId(),
+                    net.minecraft.world.entity.Entity.RemovalReason.DISCARDED
+            );
         }
 
-        if (client.player != null) {
+        if (client.player != null && returnPos != null) {
             client.player.setPos(returnPos);
             client.player.setYRot(returnYaw);
             client.player.setXRot(returnPitch);
             client.player.setYHeadRot(returnYaw);
+            client.player.setDeltaMovement(Vec3.ZERO);
             client.setCameraEntity(client.player);
         }
 
@@ -56,6 +62,12 @@ public final class Freecam {
         if (camera == null || client.player == null || client.level == null) return;
 
         if (client.screen != null) return;
+
+        // Let the normal mouse input control the camera view while the real
+        // player remains parked at the starting location.
+        camera.setYRot(client.player.getYRot());
+        camera.setXRot(client.player.getXRot());
+        camera.setYHeadRot(camera.getYRot());
 
         double speed = client.options.keySprint.isDown() ? 0.9D : 0.35D;
         double vertical = 0.0D;
@@ -102,11 +114,11 @@ public final class Freecam {
             camera.getZ() + z * speed
         );
         camera.setDeltaMovement(Vec3.ZERO);
-        camera.setYHeadRot(camera.getYRot());
 
-        // Keep the real player parked at the position where Freecam started.
-        client.player.setPos(returnPos);
-        client.player.setDeltaMovement(Vec3.ZERO);
+        if (returnPos != null) {
+            client.player.setPos(returnPos);
+            client.player.setDeltaMovement(Vec3.ZERO);
+        }
     }
 
     public static boolean isActive() {
