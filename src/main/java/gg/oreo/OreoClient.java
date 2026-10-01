@@ -17,11 +17,15 @@ public final class OreoClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        OreoESP.register();
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (OPEN_GUI.consumeClick()) {
                 if (client.screen == null) client.setScreen(new OreoScreen());
             }
+
             Freecam.tick(client);
+            OreoESP.tick(client);
         });
     }
 }
