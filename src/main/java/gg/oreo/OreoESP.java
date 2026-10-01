@@ -85,21 +85,55 @@ public final class OreoESP {
         if (!storageOn && !spawnerOn) return;
 
         Vec3 camera = context.worldState().cameraRenderState.pos;
-        PoseStack matrices = context.matrices();
-        MultiBufferSource consumers = context.consumers();
-        VertexConsumer lines = consumers.getBuffer(RenderTypes.lines());
 
-        matrices.pushPose();
-        matrices.translate(-camera.x, -camera.y, -camera.z);
+        // Queue the geometry using camera-relative coordinates. Do not mutate the
+        // shared render PoseStack because the queued command may execute later.
+        context.commandQueue().submitCustomGeometry(
+                context.matrices(),
+                RenderTypes.lines(),
+                (pose, consumer) -> {
+                    if (storageOn) {
+                        renderBoxesRelative(pose, consumer, STORAGE, camera, 0.15f, 0.85f, 1.0f);
+                    }
+                    if (spawnerOn) {
+                        renderBoxesRelative(pose, consumer, SPAWNERS, camera, 1.0f, 0.35f, 0.15f);
+                    }
+                }
+        );
+    }
 
-        if (storageOn) {
-            renderBoxes(matrices.last(), lines, STORAGE, 0.15f, 0.85f, 1.0f);
+    private static void renderBoxesRelative(
+            PoseStack.Pose pose,
+            VertexConsumer consumer,
+            List<BlockPos> positions,
+            Vec3 camera,
+            float red,
+            float green,
+            float blue) {
+
+        for (BlockPos pos : positions) {
+            float x0 = (float) (pos.getX() - camera.x);
+            float y0 = (float) (pos.getY() - camera.y);
+            float z0 = (float) (pos.getZ() - camera.z);
+            float x1 = x0 + 1.0f;
+            float y1 = y0 + 1.0f;
+            float z1 = z0 + 1.0f;
+
+            line(consumer, pose, x0, y0, z0, x1, y0, z0, red, green, blue);
+            line(consumer, pose, x0, y0, z0, x0, y0, z1, red, green, blue);
+            line(consumer, pose, x1, y0, z0, x1, y0, z1, red, green, blue);
+            line(consumer, pose, x0, y0, z1, x1, y0, z1, red, green, blue);
+
+            line(consumer, pose, x0, y1, z0, x1, y1, z0, red, green, blue);
+            line(consumer, pose, x0, y1, z0, x0, y1, z1, red, green, blue);
+            line(consumer, pose, x1, y1, z0, x1, y1, z1, red, green, blue);
+            line(consumer, pose, x0, y1, z1, x1, y1, z1, red, green, blue);
+
+            line(consumer, pose, x0, y0, z0, x0, y1, z0, red, green, blue);
+            line(consumer, pose, x1, y0, z0, x1, y1, z0, red, green, blue);
+            line(consumer, pose, x0, y0, z1, x0, y1, z1, red, green, blue);
+            line(consumer, pose, x1, y0, z1, x1, y1, z1, red, green, blue);
         }
-        if (spawnerOn) {
-            renderBoxes(matrices.last(), lines, SPAWNERS, 1.0f, 0.35f, 0.15f);
-        }
-
-        matrices.popPose();
     }
 
     private static void renderBoxes(
