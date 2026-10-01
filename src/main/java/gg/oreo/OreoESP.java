@@ -5,22 +5,17 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.block.BarrelBlock;
+import net.minecraft.inventory.Inventory;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.ChestBlock;
-import net.minecraft.world.level.block.DispenserBlock;
-import net.minecraft.world.level.block.DropperBlock;
-import net.minecraft.world.level.block.EnderChestBlock;
-import net.minecraft.world.level.block.ShulkerBoxBlock;
-import net.minecraft.world.level.block.HopperBlock;
-import net.minecraft.world.level.block.CrafterBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -38,57 +33,47 @@ public final class OreoESP {
 
     public static void tick(Minecraft client) {
         if (client.level == null || client.player == null) return;
-        if (!OreoScreen.isModuleEnabled("StorageFinder")
-                && !OreoScreen.isModuleEnabled("SpawnerFinder")) {
+
+        boolean storageOn = OreoScreen.isModuleEnabled("StorageFinder");
+        boolean spawnerOn = OreoScreen.isModuleEnabled("SpawnerFinder");
+
+        if (!storageOn && !spawnerOn) {
             STORAGE.clear();
             SPAWNERS.clear();
             return;
         }
 
-        if (client.level.getGameTime() - lastScanTick < 10L) return;
-        lastScanTick = client.level.getGameTime();
+        long gameTime = client.level.getGameTime();
+        if (gameTime - lastScanTick < 10L) return;
+        lastScanTick = gameTime;
 
         STORAGE.clear();
         SPAWNERS.clear();
 
         int centerChunkX = client.player.blockPosition().getX() >> 4;
         int centerChunkZ = client.player.blockPosition().getZ() >> 4;
-        int radius = Math.min(8, Math.max(4, client.options.renderDistance().get() / 2));
+        int radius = Math.min(10, Math.max(4, client.options.renderDistance().get() / 2));
 
         for (int cx = centerChunkX - radius; cx <= centerChunkX + radius; cx++) {
             for (int cz = centerChunkZ - radius; cz <= centerChunkZ + radius; cz++) {
                 if (!client.level.hasChunk(cx, cz)) continue;
 
                 LevelChunk chunk = client.level.getChunk(cx, cz);
-                for (Map.Entry<BlockPos, net.minecraft.world.level.block.entity.BlockEntity> entry
-                        : chunk.getBlockEntities().entrySet()) {
+
+                for (Map.Entry<BlockPos, BlockEntity> entry : chunk.getBlockEntities().entrySet()) {
                     BlockPos pos = entry.getKey();
                     BlockState state = client.level.getBlockState(pos);
                     Block block = state.getBlock();
+                    BlockEntity entity = entry.getValue();
 
-                    if (isSpawner(block)) {
+                    if (spawnerOn && (block == Blocks.SPAWNER || block == Blocks.TRIAL_SPAWNER)) {
                         SPAWNERS.add(pos.immutable());
-                    } else if (isStorage(block)) {
+                    } else if (storageOn && entity instanceof Inventory) {
                         STORAGE.add(pos.immutable());
                     }
                 }
             }
         }
-    }
-
-    private static boolean isSpawner(Block block) {
-        return block == Blocks.SPAWNER || block == Blocks.TRIAL_SPAWNER;
-    }
-
-    private static boolean isStorage(Block block) {
-        return block instanceof ChestBlock
-                || block instanceof BarrelBlock
-                || block instanceof ShulkerBoxBlock
-                || block instanceof EnderChestBlock
-                || block instanceof HopperBlock
-                || block instanceof DispenserBlock
-                || block instanceof DropperBlock
-                || block instanceof CrafterBlock;
     }
 
     private static void render(WorldRenderContext context) {
@@ -99,35 +84,22 @@ public final class OreoESP {
         boolean spawnerOn = OreoScreen.isModuleEnabled("SpawnerFinder");
         if (!storageOn && !spawnerOn) return;
 
-        Vec3 camera = client.gameRenderer.getMainCamera().position();
+        Vec3 camera = context.worldState().cameraRenderState.pos;
         PoseStack matrices = context.matrices();
+        MultiBufferSource consumers = context.consumers();
+        VertexConsumer lines = consumers.getBuffer(RenderTypes.lines());
 
         matrices.pushPose();
         matrices.translate(-camera.x, -camera.y, -camera.z);
 
         if (storageOn) {
-            submitBoxes(context, matrices, STORAGE, 0.15f, 0.85f, 1.0f);
+            renderBoxes(matrices.last(), lines, STORAGE, 0.15f, 0.85f, 1.0f);
         }
         if (spawnerOn) {
-            submitBoxes(context, matrices, SPAWNERS, 1.0f, 0.35f, 0.15f);
+            renderBoxes(matrices.last(), lines, SPAWNERS, 1.0f, 0.35f, 0.15f);
         }
 
         matrices.popPose();
-    }
-
-    private static void submitBoxes(
-            WorldRenderContext context,
-            PoseStack matrices,
-            List<BlockPos> positions,
-            float red,
-            float green,
-            float blue) {
-
-        context.commandQueue().submitCustomGeometry(
-                matrices,
-                RenderTypes.lines(),
-                (pose, consumer) -> renderBoxes(pose, consumer, positions, red, green, blue)
-        );
     }
 
     private static void renderBoxes(
@@ -137,8 +109,6 @@ public final class OreoESP {
             float red,
             float green,
             float blue) {
-
-        consumer.setLineWidth(2.0f);
 
         for (BlockPos pos : positions) {
             float x0 = pos.getX();
@@ -175,5 +145,4 @@ public final class OreoESP {
         consumer.addVertex(pose, x0, y0, z0).setColor(red, green, blue, 1.0f);
         consumer.addVertex(pose, x1, y1, z1).setColor(red, green, blue, 1.0f);
     }
-
 }
