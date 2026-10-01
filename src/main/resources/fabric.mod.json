@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "oreo_gg",
-  "version": "$" + "{version}",
+  "version": "${version}",
   "name": "Oreo.gg Staff Tools",
   "description": "DonutSMP staff testing and client-side diagnostics.",
   "environment": "client",
