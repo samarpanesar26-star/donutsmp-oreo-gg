@@ -176,36 +176,4 @@ public final class OreoESP {
         consumer.addVertex(pose, x1, y1, z1).setColor(red, green, blue, 1.0f);
     }
 
-    private static void renderList(
-            PoseStack matrices,
-            MultiBufferSource buffers,
-            List<BlockPos> positions,
-            net.minecraft.client.multiplayer.ClientLevel level,
-            float red,
-            float green,
-            float blue) {
-
-        var consumer = buffers.getBuffer(RenderTypes.lines());
-
-        for (BlockPos pos : positions) {
-            if (level.getBlockState(pos).isAir()) continue;
-
-            AABB box = new AABB(
-                    pos.getX(),
-                    pos.getY(),
-                    pos.getZ(),
-                    pos.getX() + 1.0D,
-                    pos.getY() + 1.0D,
-                    pos.getZ() + 1.0D
-            );
-
-            ShapeRenderer.renderLineBox(
-                    matrices,
-                    consumer,
-                    box.minX, box.minY, box.minZ,
-                    box.maxX, box.maxY, box.maxZ,
-                    red, green, blue, 1.0f
-            );
-        }
-    }
 }
