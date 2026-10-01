@@ -65,10 +65,6 @@ public final class Freecam {
 
         // Let the normal mouse input control the camera view while the real
         // player remains parked at the starting location.
-        camera.setYRot(client.player.getYRot());
-        camera.setXRot(client.player.getXRot());
-        camera.setYHeadRot(camera.getYRot());
-
         double speed = client.options.keySprint.isDown() ? 0.9D : 0.35D;
         double vertical = 0.0D;
 
