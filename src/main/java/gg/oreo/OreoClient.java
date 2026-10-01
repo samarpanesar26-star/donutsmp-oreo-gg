@@ -12,21 +12,16 @@ public final class OreoClient implements ClientModInitializer {
         KeyMapping.Category.register(Identifier.fromNamespaceAndPath("oreo_gg", "main"));
 
     private static final KeyMapping OPEN_GUI = KeyBindingHelper.registerKeyBinding(
-        new KeyMapping(
-            "key.oreo.open_gui",
-            GLFW.GLFW_KEY_RIGHT_SHIFT,
-            OREO_CATEGORY
-        )
+        new KeyMapping("key.oreo.open_gui", GLFW.GLFW_KEY_RIGHT_SHIFT, OREO_CATEGORY)
     );
 
     @Override
     public void onInitializeClient() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (OPEN_GUI.consumeClick()) {
-                if (client.screen == null) {
-                    client.setScreen(new OreoScreen());
-                }
+                if (client.screen == null) client.setScreen(new OreoScreen());
             }
+            Freecam.tick(client);
         });
     }
 }
