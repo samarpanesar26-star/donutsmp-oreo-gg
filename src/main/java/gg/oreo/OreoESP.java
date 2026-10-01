@@ -1,11 +1,10 @@
 package gg.oreo;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.ShapeRenderer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.BarrelBlock;
@@ -102,19 +101,79 @@ public final class OreoESP {
 
         Vec3 camera = client.gameRenderer.getMainCamera().position();
         PoseStack matrices = context.matrices();
-        MultiBufferSource buffers = context.consumers();
 
         matrices.pushPose();
         matrices.translate(-camera.x, -camera.y, -camera.z);
 
         if (storageOn) {
-            renderList(matrices, buffers, STORAGE, client.level, 0.15f, 0.85f, 1.0f);
+            submitBoxes(context, matrices, STORAGE, 0.15f, 0.85f, 1.0f);
         }
         if (spawnerOn) {
-            renderList(matrices, buffers, SPAWNERS, client.level, 1.0f, 0.35f, 0.15f);
+            submitBoxes(context, matrices, SPAWNERS, 1.0f, 0.35f, 0.15f);
         }
 
         matrices.popPose();
+    }
+
+    private static void submitBoxes(
+            WorldRenderContext context,
+            PoseStack matrices,
+            List<BlockPos> positions,
+            float red,
+            float green,
+            float blue) {
+
+        context.commandQueue().submitCustomGeometry(
+                matrices,
+                RenderTypes.lines(),
+                (pose, consumer) -> renderBoxes(pose, consumer, positions, red, green, blue)
+        );
+    }
+
+    private static void renderBoxes(
+            PoseStack.Pose pose,
+            VertexConsumer consumer,
+            List<BlockPos> positions,
+            float red,
+            float green,
+            float blue) {
+
+        consumer.setLineWidth(2.0f);
+
+        for (BlockPos pos : positions) {
+            float x0 = pos.getX();
+            float y0 = pos.getY();
+            float z0 = pos.getZ();
+            float x1 = x0 + 1.0f;
+            float y1 = y0 + 1.0f;
+            float z1 = z0 + 1.0f;
+
+            line(consumer, pose, x0, y0, z0, x1, y0, z0, red, green, blue);
+            line(consumer, pose, x0, y0, z0, x0, y0, z1, red, green, blue);
+            line(consumer, pose, x1, y0, z0, x1, y0, z1, red, green, blue);
+            line(consumer, pose, x0, y0, z1, x1, y0, z1, red, green, blue);
+
+            line(consumer, pose, x0, y1, z0, x1, y1, z0, red, green, blue);
+            line(consumer, pose, x0, y1, z0, x0, y1, z1, red, green, blue);
+            line(consumer, pose, x1, y1, z0, x1, y1, z1, red, green, blue);
+            line(consumer, pose, x0, y1, z1, x1, y1, z1, red, green, blue);
+
+            line(consumer, pose, x0, y0, z0, x0, y1, z0, red, green, blue);
+            line(consumer, pose, x1, y0, z0, x1, y1, z0, red, green, blue);
+            line(consumer, pose, x0, y0, z1, x0, y1, z1, red, green, blue);
+            line(consumer, pose, x1, y0, z1, x1, y1, z1, red, green, blue);
+        }
+    }
+
+    private static void line(
+            VertexConsumer consumer,
+            PoseStack.Pose pose,
+            float x0, float y0, float z0,
+            float x1, float y1, float z1,
+            float red, float green, float blue) {
+
+        consumer.addVertex(pose, x0, y0, z0).setColor(red, green, blue, 1.0f);
+        consumer.addVertex(pose, x1, y1, z1).setColor(red, green, blue, 1.0f);
     }
 
     private static void renderList(
