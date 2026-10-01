@@ -1,4 +1,5 @@
 {
-  "key.category.oreo_gg.main": "Oreo.gg",
-  "key.oreo.open_gui": "Open Oreo.gg"
+  "key.category.oreo_gg.main": "Oreo GG Client",
+  "key.oreo.open_gui": "Open Oreo GG Client",
+  "key.oreo.toggle_freecam": "Toggle Oreo GG Freecam"
 }
