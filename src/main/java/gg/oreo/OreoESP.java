@@ -9,7 +9,6 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.Container;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -28,7 +27,8 @@ public final class OreoESP {
     private OreoESP() {}
 
     public static void register() {
-        WorldRenderEvents.AFTER_ENTITIES.register(OreoESP::render);
+        // Debug-style line overlays are safest in this render stage on 1.21.11.
+        WorldRenderEvents.BEFORE_DEBUG_RENDER.register(OreoESP::render);
     }
 
     public static void tick(Minecraft client) {
@@ -59,14 +59,12 @@ public final class OreoESP {
                 if (!client.level.hasChunk(cx, cz)) continue;
 
                 LevelChunk chunk = client.level.getChunk(cx, cz);
-
                 for (Map.Entry<BlockPos, BlockEntity> entry : chunk.getBlockEntities().entrySet()) {
                     BlockPos pos = entry.getKey();
                     BlockState state = client.level.getBlockState(pos);
-                    Block block = state.getBlock();
                     BlockEntity entity = entry.getValue();
 
-                    if (spawnerOn && (block == Blocks.SPAWNER || block == Blocks.TRIAL_SPAWNER)) {
+                    if (spawnerOn && (state.is(Blocks.SPAWNER) || state.is(Blocks.TRIAL_SPAWNER))) {
                         SPAWNERS.add(pos.immutable());
                     } else if (storageOn && entity instanceof Container) {
                         STORAGE.add(pos.immutable());
@@ -77,29 +75,26 @@ public final class OreoESP {
     }
 
     private static void render(WorldRenderContext context) {
+        if (!OreoScreen.isModuleEnabled("StorageFinder")
+                && !OreoScreen.isModuleEnabled("SpawnerFinder")) return;
+
         Minecraft client = Minecraft.getInstance();
         if (client.level == null) return;
 
-        boolean storageOn = OreoScreen.isModuleEnabled("StorageFinder");
-        boolean spawnerOn = OreoScreen.isModuleEnabled("SpawnerFinder");
-        if (!storageOn && !spawnerOn) return;
-
         Vec3 camera = context.worldState().cameraRenderState.pos;
+        MultiBufferSource consumers = context.consumers();
+        if (consumers == null) return;
 
-        // Queue the geometry using camera-relative coordinates. Do not mutate the
-        // shared render PoseStack because the queued command may execute later.
-        context.commandQueue().submitCustomGeometry(
-                context.matrices(),
-                RenderTypes.lines(),
-                (pose, consumer) -> {
-                    if (storageOn) {
-                        renderBoxesRelative(pose, consumer, STORAGE, camera, 0.15f, 0.85f, 1.0f);
-                    }
-                    if (spawnerOn) {
-                        renderBoxesRelative(pose, consumer, SPAWNERS, camera, 1.0f, 0.35f, 0.15f);
-                    }
-                }
-        );
+        VertexConsumer consumer = consumers.getBuffer(RenderTypes.lines());
+        PoseStack matrices = context.matrices();
+        PoseStack.Pose pose = matrices.last();
+
+        if (OreoScreen.isModuleEnabled("StorageFinder")) {
+            renderBoxesRelative(pose, consumer, STORAGE, camera, 0.15f, 0.85f, 1.0f);
+        }
+        if (OreoScreen.isModuleEnabled("SpawnerFinder")) {
+            renderBoxesRelative(pose, consumer, SPAWNERS, camera, 1.0f, 0.35f, 0.15f);
+        }
     }
 
     private static void renderBoxesRelative(
@@ -119,64 +114,27 @@ public final class OreoESP {
             float y1 = y0 + 1.0f;
             float z1 = z0 + 1.0f;
 
-            line(consumer, pose, x0, y0, z0, x1, y0, z0, red, green, blue);
-            line(consumer, pose, x0, y0, z0, x0, y0, z1, red, green, blue);
-            line(consumer, pose, x1, y0, z0, x1, y0, z1, red, green, blue);
-            line(consumer, pose, x0, y0, z1, x1, y0, z1, red, green, blue);
+            line(consumer, pose, x0,y0,z0, x1,y0,z0, red,green,blue);
+            line(consumer, pose, x0,y0,z0, x0,y0,z1, red,green,blue);
+            line(consumer, pose, x1,y0,z0, x1,y0,z1, red,green,blue);
+            line(consumer, pose, x0,y0,z1, x1,y0,z1, red,green,blue);
 
-            line(consumer, pose, x0, y1, z0, x1, y1, z0, red, green, blue);
-            line(consumer, pose, x0, y1, z0, x0, y1, z1, red, green, blue);
-            line(consumer, pose, x1, y1, z0, x1, y1, z1, red, green, blue);
-            line(consumer, pose, x0, y1, z1, x1, y1, z1, red, green, blue);
+            line(consumer, pose, x0,y1,z0, x1,y1,z0, red,green,blue);
+            line(consumer, pose, x0,y1,z0, x0,y1,z1, red,green,blue);
+            line(consumer, pose, x1,y1,z0, x1,y1,z1, red,green,blue);
+            line(consumer, pose, x0,y1,z1, x1,y1,z1, red,green,blue);
 
-            line(consumer, pose, x0, y0, z0, x0, y1, z0, red, green, blue);
-            line(consumer, pose, x1, y0, z0, x1, y1, z0, red, green, blue);
-            line(consumer, pose, x0, y0, z1, x0, y1, z1, red, green, blue);
-            line(consumer, pose, x1, y0, z1, x1, y1, z1, red, green, blue);
+            line(consumer, pose, x0,y0,z0, x0,y1,z0, red,green,blue);
+            line(consumer, pose, x1,y0,z0, x1,y1,z0, red,green,blue);
+            line(consumer, pose, x0,y0,z1, x0,y1,z1, red,green,blue);
+            line(consumer, pose, x1,y0,z1, x1,y1,z1, red,green,blue);
         }
     }
 
-    private static void renderBoxes(
-            PoseStack.Pose pose,
-            VertexConsumer consumer,
-            List<BlockPos> positions,
-            float red,
-            float green,
-            float blue) {
-
-        for (BlockPos pos : positions) {
-            float x0 = pos.getX();
-            float y0 = pos.getY();
-            float z0 = pos.getZ();
-            float x1 = x0 + 1.0f;
-            float y1 = y0 + 1.0f;
-            float z1 = z0 + 1.0f;
-
-            line(consumer, pose, x0, y0, z0, x1, y0, z0, red, green, blue);
-            line(consumer, pose, x0, y0, z0, x0, y0, z1, red, green, blue);
-            line(consumer, pose, x1, y0, z0, x1, y0, z1, red, green, blue);
-            line(consumer, pose, x0, y0, z1, x1, y0, z1, red, green, blue);
-
-            line(consumer, pose, x0, y1, z0, x1, y1, z0, red, green, blue);
-            line(consumer, pose, x0, y1, z0, x0, y1, z1, red, green, blue);
-            line(consumer, pose, x1, y1, z0, x1, y1, z1, red, green, blue);
-            line(consumer, pose, x0, y1, z1, x1, y1, z1, red, green, blue);
-
-            line(consumer, pose, x0, y0, z0, x0, y1, z0, red, green, blue);
-            line(consumer, pose, x1, y0, z0, x1, y1, z0, red, green, blue);
-            line(consumer, pose, x0, y0, z1, x0, y1, z1, red, green, blue);
-            line(consumer, pose, x1, y0, z1, x1, y1, z1, red, green, blue);
-        }
-    }
-
-    private static void line(
-            VertexConsumer consumer,
-            PoseStack.Pose pose,
-            float x0, float y0, float z0,
-            float x1, float y1, float z1,
-            float red, float green, float blue) {
-
-        consumer.addVertex(pose, x0, y0, z0).setColor(red, green, blue, 1.0f);
-        consumer.addVertex(pose, x1, y1, z1).setColor(red, green, blue, 1.0f);
+    private static void line(VertexConsumer consumer, PoseStack.Pose pose,
+                             float x0,float y0,float z0, float x1,float y1,float z1,
+                             float red,float green,float blue) {
+        consumer.addVertex(pose, x0,y0,z0).setColor(red,green,blue,1.0f);
+        consumer.addVertex(pose, x1,y1,z1).setColor(red,green,blue,1.0f);
     }
 }
