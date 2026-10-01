@@ -22,8 +22,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.client.renderer.MultiBufferSource;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -142,7 +140,13 @@ public final class OreoESP {
                     pos.getZ() + 1.0D
             );
 
-            ShapeRenderer.renderLineBox(matrices, consumer, box, red, green, blue, 1.0f);
+            ShapeRenderer.renderLineBox(
+                    matrices,
+                    consumer,
+                    box.minX, box.minY, box.minZ,
+                    box.maxX, box.maxY, box.maxZ,
+                    red, green, blue, 1.0f
+            );
         }
     }
 }
