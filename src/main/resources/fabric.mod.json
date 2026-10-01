@@ -2,10 +2,12 @@
   "schemaVersion": 1,
   "id": "oreo_gg",
   "version": "${version}",
-  "name": "Oreo.gg Staff Tools",
-  "description": "DonutSMP staff testing and client-side diagnostics.",
+  "name": "Oreo GG Client",
+  "description": "Oreo GG client-side staff tools and diagnostics for Minecraft 1.21.11.",
   "environment": "client",
-  "entrypoints": { "client": ["gg.oreo.OreoClient"] },
+  "entrypoints": {
+    "client": ["gg.oreo.OreoClient"]
+  },
   "depends": {
     "fabricloader": ">=0.18.1",
     "minecraft": "1.21.11",
